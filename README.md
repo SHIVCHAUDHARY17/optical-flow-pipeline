@@ -16,11 +16,14 @@
 
 <div align="center">
 
-![Demo](docs/farneback_flow.jpg)
+![Demo](docs/demo.gif)
 
-*Farneback dense flow on a top-down intersection — each traffic stream appears in a distinct color.
-Yellow = moving right, blue = moving left, green = curved approach, purple = bottom-to-top.
-Static road surface and parked vehicles appear black — zero motion.*
+*Side-by-side comparison — Lucas-Kanade sparse flow (left) vs Farneback dense flow (right)
+on a top-down intersection video. Green arrows track keypoints on the left.
+HSV colorwheel on the right shows each traffic stream in a distinct color —
+yellow, blue, green, purple — with static road surface appearing black.*
+
+![Comparison](docs/comparison.jpg)
 
 </div>
 
@@ -136,6 +139,81 @@ tracked automatically in MLflow.
 LK is 31× faster than Farneback because it processes only ~500 keypoints per frame
 versus all 921,600 pixels. The segmentation threshold controls sensitivity — lower
 values detect more motion including noise, higher values detect only fast-moving objects.
+
+---
+
+## MLflow Experiment Tracking
+
+Every benchmark run is automatically logged to MLflow — no manual note-taking,
+no comparing terminal outputs. This is how production ML teams track experiments.
+
+```bash
+python run_benchmark.py                       # runs all methods, logs everything
+mlflow ui --backend-store-uri mlruns          # opens browser dashboard
+```
+
+What gets logged per run automatically:
+
+| Category | What is tracked |
+|---|---|
+| Parameters | method name, threshold value, resize resolution, window size |
+| Per-frame metrics | FPS at every frame, motion ratio, blob count — as line charts |
+| Summary metrics | avg_fps, avg_inference_ms, avg_motion_pct — final numbers |
+
+Without MLflow you run a method, write the FPS somewhere, change a threshold,
+run again, and slowly lose track of which configuration produced which result.
+With MLflow every run is permanently stored — you can compare all 5 runs side by side,
+see exactly which threshold found the most moving blobs, and reproduce any result
+by reading its logged parameters.
+
+---
+
+## Engineering Stack and What Each Layer Adds
+
+| Tool | Why it is here | What it proves |
+|---|---|---|
+| MLflow | Tracks every experiment automatically | You work like a production ML team, not a notebook |
+| FastAPI | Serves the model as a REST endpoint | The pipeline is usable by other systems, not just scripts |
+| Docker | Packages the entire environment | Anyone can run this without setup — reproducibility |
+| pytest | 39 unit tests on synthetic arrays | Logic is verified independently of video files |
+| GitHub Actions | Runs tests on every push | Code quality is enforced automatically, not manually |
+| Makefile | One command per operation | No documentation needed to run the project |
+| pre-commit | Black formats code before every commit | Style is consistent without thinking about it |
+| Structured logging | Every module uses Python logging | No print statements — production-grade observability |
+
+---
+
+## Key Learnings
+
+**The sparse vs dense trade-off is real and measurable.**
+LK runs at 166 FPS because it tracks ~500 keypoints. Farneback runs at 5.3 FPS
+because it processes all 921,600 pixels. This 31× speed difference is the same
+trade-off that appears in every perception system — you choose coverage or speed,
+and the right answer depends on your use case.
+
+**Viewpoint completely changes what works.**
+YOLO fails on aerial footage because its training distribution is ground-level.
+LK fails on aerial footage because vehicles are too small for corner detection.
+Farneback succeeds on aerial footage because it does not care about object size —
+it computes flow for every pixel regardless. This is domain shift experienced
+through implementation, not theory.
+
+**Motion segmentation needs no labels.**
+The most striking result: you can identify every moving vehicle in a busy
+intersection, frame by frame, with zero training data, zero annotations, and zero
+class labels — just by thresholding flow magnitude. This is pure geometry working
+where machine learning is not needed at all.
+
+**MLflow changes how you think about experiments.**
+Without experiment tracking you run things and forget. With MLflow you start
+thinking in terms of runs, parameters, and reproducibility automatically.
+The habit of logging everything is worth more than any specific metric result.
+
+**The brightness constancy assumption breaks in practice.**
+LK and Farneback both assume a pixel keeps its intensity as it moves.
+This fails at object boundaries, under sudden lighting changes, and on reflective
+surfaces like wet roads. RAFT learned to handle these cases from training data —
+which is why deep learning flow generalizes better but needs 38× more compute than LK.
 
 ---
 
@@ -265,7 +343,7 @@ video:
 
 ---
 
-## FastAPI serving
+## FastAPI Serving
 
 ```bash
 # Start the server
