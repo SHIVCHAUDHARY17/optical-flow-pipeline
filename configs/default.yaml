@@ -1,0 +1,41 @@
+video:
+  path: data/test_video2.mp4
+  resize_width: 1280
+  resize_height: 720
+
+flow:
+  method: raft
+  max_corners: 500
+  quality_level: 0.1
+  min_distance: 5
+  block_size: 7
+
+segmentation:
+  magnitude_threshold: 1.2
+  blur_kernel: 3
+  morph_kernel: 5
+
+raft:
+  device: cuda
+  iters: 12
+  infer_width: 640
+  infer_height: 360
+
+detector:
+  weights: yolov8n.pt
+  confidence: 0.3
+  device: cuda
+
+output:
+  video_out: outputs/raft_flow_video.mp4
+  segmentation_out: outputs/segmentation_video.mp4
+  overlay_out: outputs/detection_flow_video.mp4
+  colormap: COLORMAP_HSV
+
+mlflow:
+  experiment_name: optical-flow-benchmark
+  tracking_uri: mlruns
+
+profiler:
+  enabled: true
+  log_path: outputs/profiler_log.csv

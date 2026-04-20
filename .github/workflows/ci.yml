@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # opencv-python (non-headless) requires these shared libraries on Linux
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+
+      # Install CPU-only torch first — requirements.txt pins +cu121 local tags
+      # that don't exist on PyPI, so we handle torch separately here
+      - name: Install PyTorch (CPU)
+        run: |
+          pip install --upgrade pip
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+      # Install everything else from requirements.txt, skipping the torch lines
+      # already satisfied above
+      - name: Install project dependencies
+        run: |
+          grep -vE "^torch|^torchvision" requirements.txt | pip install -r /dev/stdin
+
+      - name: Run tests
+        run: pytest tests/ -v

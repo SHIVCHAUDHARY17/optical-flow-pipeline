@@ -1,0 +1,43 @@
+# --- Python ---
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+# --- Environment / secrets ---
+.env
+*.env.*
+
+# --- Generated outputs ---
+outputs/
+
+# --- Input data (videos too large for git) ---
+data/
+
+# --- Model weights ---
+*.pt
+*.pth
+*.onnx
+*.bin
+*.safetensors
+
+# --- Experiment tracking ---
+mlruns/
+
+# --- Tool caches ---
+.pytest_cache/
+.pre-commit-config-cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Claude Code local settings ---
+.claude/
+
+# --- Logs ---
+*.log
+
+# --- OS ---
+.DS_Store
+Thumbs.db
